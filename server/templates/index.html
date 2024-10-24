@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>House Price Prediction</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .prediction-card {
+        transition: all 0.3s ease;
+      }
+      .prediction-card:hover {
+        transform: translateY(-5px);
+      }
+      .loading {
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <!-- Main Content -->
+    <div class="container mx-auto px-6 py-8">
+      <!-- Hero Section -->
+      <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">
+          Predict House Prices
+        </h1>
+        <p class="text-gray-600">
+          Get accurate price estimates based on location, size, and amenities
+        </p>
+      </div>
+
+      <!-- Prediction Form -->
+      <div
+        class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8 prediction-card"
+      >
+        <form id="prediction-form" class="space-y-6">
+          <div>
+            <label
+              class="block text-gray-700 text-sm font-bold mb-2"
+              for="location"
+              >Location</label
+            >
+            <select
+              id="location"
+              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+            >
+              <option value="">Select a location</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="sqft"
+              >Total Square Feet</label
+            >
+            <input
+              type="number"
+              id="sqft"
+              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+              placeholder="Enter total sqft"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-gray-700 text-sm font-bold mb-2"
+                for="bhk"
+                >BHK</label
+              >
+              <input
+                type="number"
+                id="bhk"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="Number of BHK"
+                min="1"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-gray-700 text-sm font-bold mb-2"
+                for="bath"
+                >Bathrooms</label
+              >
+              <input
+                type="number"
+                id="bath"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="Number of bathrooms"
+                min="1"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-300"
+          >
+            Predict Price
+          </button>
+        </form>
+
+        <!-- Result Section -->
+        <div id="result" class="mt-8 hidden">
+          <div class="border-t pt-8">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">
+              Estimated Price
+            </h3>
+            <div class="text-3xl font-bold text-blue-600" id="estimated-price">
+              Rs. 0
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="hidden mt-8 flex justify-center">
+          <div
+            class="loading h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Load locations when page loads
+        fetch("/get-locations")
+          .then((response) => response.json())
+          .then((data) => {
+            const locationSelect = document.getElementById("location");
+            data.locations.forEach((location) => {
+              const option = document.createElement("option");
+              option.value = location;
+              option.textContent = location;
+              locationSelect.appendChild(option);
+            });
+          })
+          .catch((error) => console.error("Error loading locations:", error));
+
+        // Handle form submission
+        document
+          .getElementById("prediction-form")
+          .addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            // Show loading spinner
+            document.getElementById("loading").classList.remove("hidden");
+            document.getElementById("result").classList.add("hidden");
+
+            // Get form values
+            const data = {
+              location: document.getElementById("location").value,
+              total_sqft: document.getElementById("sqft").value,
+              bhk: document.getElementById("bhk").value,
+              bath: document.getElementById("bath").value,
+            };
+
+            // Validate form
+            if (!data.location || !data.total_sqft || !data.bhk || !data.bath) {
+              alert("Please fill all fields");
+              document.getElementById("loading").classList.add("hidden");
+              return;
+            }
+
+            // Make prediction request
+            fetch("/predict-home-price", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                // Hide loading spinner
+                document.getElementById("loading").classList.add("hidden");
+
+                // Show result
+                document.getElementById("result").classList.remove("hidden");
+                document.getElementById("estimated-price").textContent =
+                  "Rs." +
+                  data.estimated_price.toLocaleString("en-IN", {
+                    maximumFractionDigits: 2,
+                  }) +
+                  " Lakhs";
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+                document.getElementById("loading").classList.add("hidden");
+                alert("An error occurred while making the prediction");
+              });
+          });
+      });
+    </script>
+  </body>
+</html>
